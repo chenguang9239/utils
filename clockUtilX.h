@@ -2,8 +2,8 @@
 // Created by admin on 2018/12/7.
 //
 
-#ifndef CPPSERVER_CLOCKUTIL_H
-#define CPPSERVER_CLOCKUTIL_H
+#ifndef CPPSERVER_CLOCKUTILX_H
+#define CPPSERVER_CLOCKUTILX_H
 
 #include <chrono>
 #include <boost/thread/shared_mutex.hpp>
@@ -39,4 +39,4 @@ public:
 };
 
 
-#endif //CPPSERVER_CLOCKUTIL_H
+#endif //CPPSERVER_CLOCKUTILX_H
