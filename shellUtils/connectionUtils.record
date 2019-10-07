@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+
+echo "TCP各状态连接 计数+排序"
+netstat -nat | awk '{print $6}' | sort | uniq -c | sort -rn
+
+echo "某个服务的连接 按对端IP计数+排序"
+netstat -nap | grep "docFeature" | awk '{print $5}'| awk -F':' '{print $1}' | sort | uniq -c | sort -rn
+
+echo "TCP各状态连接 计数， NF行数 $NF最后一列"
+netstat -n | awk '/^tcp/ {++S[$NF]};END {for(a in S) print a, S[a]}'
+
+echo "对来到指定网卡 并且到指定端口的包 抓1000个包，按对端IP计数+排序，可能对机器性能有一定影响"
+tcpdump -i eth4 -tnn dst port 2644 -c 1000 | awk -F"." '{print $1"."$2"."$3"."$4}' | sort | uniq -c | sort -nr
