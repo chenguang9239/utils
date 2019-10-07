@@ -56,6 +56,34 @@ public:
     static double divide(double dividend, double divisor);
 
     static bool startsWith(const std::string &s, const std::string &prefix, size_t fromPos = 0);
+
+    static std::string addTimestampToLogFile(const std::string &logFile);
+
+    static int int32TrailingZerosCnt(int i);
+
+//    template<typename T>
+//    std::shared_ptr<std::unordered_set<T>> dataToUSetSPtr(const T &data);
+
+    template<typename T>
+    static std::shared_ptr<std::unordered_set<T>> vectorToUSetSPtr(const std::vector<T> &v);
+
+    static size_t findCaseInsensitive(const std::string &data, const std::string &target);
+
+    static bool checkDoubleSymbol(const std::string &data,
+                                  char leftSymbol,
+                                  char rightSymbol,
+                                  const bool sequence = false);
+
+    static bool checkDoubleSymbol(const std::string &data,
+                                  const std::set<char> &leftSymbols,
+                                  const std::set<char> &rightSymbols,
+                                  const bool sequence = false);
+
+    template<typename T>
+    static std::vector<T> uniqueVectorElements(const std::vector<T> &v);
+
+    template<typename T>
+    static std::vector<T> appendVector(const std::vector<T> &a, const std::vector<T> &b);
 };
 
 template<typename K, typename V>
@@ -73,6 +101,63 @@ bool Utils::vectorContains(const std::vector<T> &v, const T &t) {
         if (*it == t) return true;
     }
     return false;
+}
+
+template<typename T>
+bool Utils::vectorContains(const std::vector<T> &v, const T &t) {
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        if (*it == t) return true;
+    }
+    return false;
+}
+
+//template<typename T>
+//std::shared_ptr<std::unordered_set<T>> Utils::dataToUSetSPtr(const T &data) {
+//    auto res = std::make_shared<std::unordered_set<T>>();
+//    res->insert(data);
+//    return res;
+//}
+
+template<typename T>
+std::shared_ptr<std::unordered_set<T>> Utils::vectorToUSetSPtr(const std::vector<T> &v) {
+    auto res = std::make_shared<std::unordered_set<T>>();
+    if (!v.empty()) {
+        res->insert(v.begin(), v.end());
+    }
+    return res;
+}
+
+template<typename T>
+std::vector<T> Utils::uniqueVectorElements(const std::vector<T> &v) {
+    std::vector<T> res;
+    try {
+        if (v.size() > 1) {
+            std::map<T, short> tmpFilter;
+            for (auto &e : v) {
+                if (++tmpFilter[e] == 1) {
+                    res.push_back(e);
+                }
+            }
+        } else {
+            res = v;
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "unique vector elements exception: " << e.what();
+    }
+    return res;
+}
+
+template<typename T>
+std::vector<T> Utils::appendVector(const std::vector<T> &a, const std::vector<T> &b) {
+    std::vector<T> res = a;
+    try {
+        if (!b.empty()) {
+            std::copy(b.begin(), b.end(), std::back_inserter(res));
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "append vector to vector exception: " << e.what();
+    }
+    return res;
 }
 
 #endif //CPPSERVER_UTILS_H

@@ -157,6 +157,88 @@ bool Utils::startsWith(const std::string &s, const std::string &prefix, size_t f
     }
 }
 
+std::string Utils::addTimestampToLogFile(const std::string &logFile) {
+    std::string res;
+
+    try {
+        if (logFile.empty()) {
+            return logFile;
+        }
+
+        auto pointPos = logFile.find_first_of('.');
+
+        if (pointPos == std::string::npos || pointPos + 1 == logFile.size()) {
+            return logFile;
+        }
+
+        std::string prefix = logFile.substr(0, pointPos);
+        std::string suffix = logFile.substr(pointPos, logFile.size() - pointPos);
+
+        res = prefix;
+        res += "_";
+        res += std::to_string(dateUtil::curSecondTimeStamp());
+        res += suffix;
+
+        return res;
+    } catch (const std::exception &e) {
+        LOG_ERROR << "addTimestampToLogFile exception: " << e.what();
+    }
+
+    return logFile;
+}
+
+int Utils::int32TrailingZerosCnt(int i) {
+    // HD, Figure 5-14
+    int y;
+    if (i == 0) return 32;
+    int n = 31;
+    y = i <<16; if (y != 0) { n = n -16; i = y; }
+    y = i << 8; if (y != 0) { n = n - 8; i = y; }
+    y = i << 4; if (y != 0) { n = n - 4; i = y; }
+    y = i << 2; if (y != 0) { n = n - 2; i = y; }
+    return n - ((unsigned)(i << 1) >> 31);
+}
+
+size_t Utils::findCaseInsensitive(const std::string &data, const std::string &target) {
+    std::string tmpData = toUpper(data);
+    std::string tmpTarget = toUpper(target);
+    return tmpData.find(tmpTarget);
+}
+
+bool Utils::checkDoubleSymbol(const std::string &data,
+                              char leftSymbol,
+                              char rightSymbol,
+                              const bool sequence) {
+    if (data.empty()) return true;
+    size_t cnt = 0;
+    for (const auto &e : data) {
+        if (e == leftSymbol) ++cnt;
+        else if (e == rightSymbol) {
+            if (cnt == 0) return false;
+            --cnt;
+        }
+        if (sequence && cnt > 1) return false;
+    }
+    return cnt == 0;
+}
+
+bool Utils::checkDoubleSymbol(const std::string &data,
+                              const std::set<char> &leftSymbols,
+                              const std::set<char> &rightSymbols,
+                              const bool sequence) {
+    if (data.empty()) return true;
+    size_t cnt = 0;
+    for (const auto &e : data) {
+        if (leftSymbols.count(e) > 0) ++cnt;
+        else if (rightSymbols.count(e) > 0) {
+            if (cnt == 0) return false;
+            --cnt;
+        }
+        if (sequence && cnt > 1) return false;
+    }
+    return cnt == 0;
+}
+
 
 
 
