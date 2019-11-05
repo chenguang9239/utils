@@ -205,13 +205,24 @@ size_t Utils::findCaseInsensitive(const std::string &data, const std::string &ta
     return tmpData.find(tmpTarget);
 }
 
+bool Utils::checkDoubleSymbol(const std::string &data, char symbol) {
+    if (data.empty()) return true;
+    size_t cnt = 0;
+    auto escapeRemovedData = removeEscape(data);
+    for (const auto &e : escapeRemovedData) {
+        if (e == symbol) ++cnt;
+    }
+    return (cnt & 1) == 0;
+}
+
 bool Utils::checkDoubleSymbol(const std::string &data,
                               char leftSymbol,
                               char rightSymbol,
-                              const bool sequence) {
+                              bool sequence) {
     if (data.empty()) return true;
     size_t cnt = 0;
-    for (const auto &e : data) {
+    auto escapeRemovedData = removeEscape(data);
+    for (const auto &e : escapeRemovedData) {
         if (e == leftSymbol) ++cnt;
         else if (e == rightSymbol) {
             if (cnt == 0) return false;
@@ -225,10 +236,11 @@ bool Utils::checkDoubleSymbol(const std::string &data,
 bool Utils::checkDoubleSymbol(const std::string &data,
                               const std::set<char> &leftSymbols,
                               const std::set<char> &rightSymbols,
-                              const bool sequence) {
+                              bool sequence) {
     if (data.empty()) return true;
     size_t cnt = 0;
-    for (const auto &e : data) {
+    auto escapeRemovedData = removeEscape(data);
+    for (const auto &e : escapeRemovedData) {
         if (leftSymbols.count(e) > 0) ++cnt;
         else if (rightSymbols.count(e) > 0) {
             if (cnt == 0) return false;
@@ -237,6 +249,115 @@ bool Utils::checkDoubleSymbol(const std::string &data,
         if (sequence && cnt > 1) return false;
     }
     return cnt == 0;
+}
+
+std::string Utils::removeEscape(const std::string &expr) {
+    std::string res;
+    try {
+        for (size_t i = 0, n = expr.size(); i < n; ++i) {
+            if (expr.at(i) != '\\') {
+                res.push_back(expr.at(i));
+            } else {
+                ++i;
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "remove escape character exception: " << e.what();
+        res.clear();
+    }
+    return res;
+}
+
+std::string Utils::parseEscape(const std::string &expr) {
+    std::string res;
+    try {
+        if (expr.size() <= 1) {
+            res = expr;
+        } else {
+            size_t n = expr.size() - 1;
+            size_t i = 0;
+            res.reserve(n);
+            for (; i < n; ++i) {
+                if (expr.at(i) == '\\') {
+                    switch (expr.at(i + 1)) {
+                        case 'n': {
+                            res.push_back('\n');
+                            break;
+                        }
+                        case 't': {
+                            res.push_back('\t');
+                            break;
+                        }
+                        case 'r': {
+                            res.push_back('\r');
+                            break;
+                        }
+                        case '\\': {
+                            res.push_back('\\');
+                            break;
+                        }
+                        default: {
+                            res.push_back(expr.at(i + 1));
+                        }
+                    }
+                    ++i;
+                } else {
+                    res.push_back(expr.at(i));
+                }
+            }
+            // 不是以被转义的字符结尾
+            if (i == n) {
+                res.push_back(expr.back());
+            } else if (i != expr.size()) {
+                LOG_ERROR << "parse escape character error, i: " << i;
+            }
+        }
+        res.shrink_to_fit();
+    } catch (const std::exception &e) {
+        LOG_ERROR << "parse escape character exception: " << e.what();
+        res.clear();
+    }
+    return res;
+}
+
+std::string Utils::parseQuery(const std::string &expr) {
+    std::string res;
+    try {
+        if (expr.size() <= 1) {
+            res = expr;
+        } else {
+            bool beginQuotation = expr.front() == '"';
+            bool endQuotation = expr.back() == '"';
+            if (beginQuotation && endQuotation) {
+                res = parseEscape(expr.substr(1, expr.size() - 2));
+            } else {
+                if (beginQuotation || endQuotation) {
+                    LOG_WARN << "unmatched quotation!";
+                }
+                res = parseEscape(expr);
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "parse query exception: " << e.what();
+        res.clear();
+    }
+    return res;
+}
+
+size_t Utils::findFirstFromQuery(const std::string &expr, const char target, size_t index) {
+    size_t res = std::string::npos;
+    try {
+        for (size_t i = index; i < expr.size(); ++i) {
+            if (expr.at(i) == target) {
+                if (i == 0 || (i > 0 && expr.at(i - 1) != '\\')) {
+                    return i;
+                }
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "find first from query exception: " << e.what();
+    }
+    return res;
 }
 
 

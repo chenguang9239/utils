@@ -69,15 +69,25 @@ public:
 
     static size_t findCaseInsensitive(const std::string &data, const std::string &target);
 
+    static bool checkDoubleSymbol(const std::string &data, char symbol);
+
     static bool checkDoubleSymbol(const std::string &data,
                                   char leftSymbol,
                                   char rightSymbol,
-                                  const bool sequence = false);
+                                  bool sequence = false);
 
     static bool checkDoubleSymbol(const std::string &data,
                                   const std::set<char> &leftSymbols,
                                   const std::set<char> &rightSymbols,
-                                  const bool sequence = false);
+                                  bool sequence = false);
+
+    static std::string removeEscape(const std::string &expr);
+
+    static std::string parseEscape(const std::string &expr);
+
+    static std::string parseQuery(const std::string &expr);
+
+    static size_t findFirstFromQuery(const std::string &expr, const char target = '"', size_t index = 0);
 
     template<typename T>
     static std::vector<T> uniqueVectorElements(const std::vector<T> &v);
