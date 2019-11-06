@@ -89,6 +89,8 @@ public:
 
     static size_t findFirstFromQuery(const std::string &expr, const char target = '"', size_t index = 0);
 
+    static std::string ptrToString(const char *p, int size = 0);
+
     template<typename T>
     static std::vector<T> uniqueVectorElements(const std::vector<T> &v);
 

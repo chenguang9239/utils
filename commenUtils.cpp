@@ -360,6 +360,15 @@ size_t Utils::findFirstFromQuery(const std::string &expr, const char target, siz
     return res;
 }
 
+std::string Utils::ptrToString(const char *p, int size) {
+    std::string res;
+    if (p) {
+        if (size > 0) { res = std::string(p, size); }
+        else { res = std::string(p); }
+    }
+    return res;
+}
+
 
 
 
