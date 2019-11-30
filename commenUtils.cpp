@@ -192,11 +192,27 @@ int Utils::int32TrailingZerosCnt(int i) {
     int y;
     if (i == 0) return 32;
     int n = 31;
-    y = i <<16; if (y != 0) { n = n -16; i = y; }
-    y = i << 8; if (y != 0) { n = n - 8; i = y; }
-    y = i << 4; if (y != 0) { n = n - 4; i = y; }
-    y = i << 2; if (y != 0) { n = n - 2; i = y; }
-    return n - ((unsigned)(i << 1) >> 31);
+    y = i << 16;
+    if (y != 0) {
+        n = n - 16;
+        i = y;
+    }
+    y = i << 8;
+    if (y != 0) {
+        n = n - 8;
+        i = y;
+    }
+    y = i << 4;
+    if (y != 0) {
+        n = n - 4;
+        i = y;
+    }
+    y = i << 2;
+    if (y != 0) {
+        n = n - 2;
+        i = y;
+    }
+    return n - ((unsigned) (i << 1) >> 31);
 }
 
 size_t Utils::findCaseInsensitive(const std::string &data, const std::string &target) {
@@ -365,6 +381,14 @@ std::string Utils::ptrToString(const char *p, int size) {
     if (p) {
         if (size > 0) { res = std::string(p, size); }
         else { res = std::string(p); }
+    }
+    return res;
+}
+
+std::string Utils::replaceChar(const std::string &s, char target, char with) {
+    std::string res = s;
+    for (auto &e : res) {
+        if (e == target) { e = with; }
     }
     return res;
 }

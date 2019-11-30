@@ -96,6 +96,8 @@ public:
 
     template<typename T>
     static std::vector<T> appendVector(const std::vector<T> &a, const std::vector<T> &b);
+
+    static std::string replaceChar(const std::string &s, char target, char with);
 };
 
 template<typename K, typename V>

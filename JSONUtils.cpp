@@ -7,7 +7,6 @@
 #include "writer.h"
 #include "document.h"
 #include "stringbuffer.h"
-#include "document.h"
 // rapidjson end
 
 std::string JSONUtils::getStringField(const std::string &json, const std::string &field) {
@@ -16,16 +15,17 @@ std::string JSONUtils::getStringField(const std::string &json, const std::string
         rapidjson::Document d;
         d.Parse(json.c_str());
         if (!d.HasParseError()) {
-            if (d.HasMember(field.c_str()) && d[field.c_str()].IsString()) {
+            if (d.IsObject() && d.HasMember(field.c_str()) && d[field.c_str()].IsString()) {
                 res = d[field.c_str()].GetString();
                 LOG_DEBUG << field << ": " << res;
             } else {
-                LOG_ERROR << "no \"" << field << "\" or its type error!"
+                LOG_ERROR << "this document is an object: " << d.IsObject()
+                          << ", may be no \"" << field << "\" member or not string type"
                           << ", json is: " << json;
             }
         } else {
-            rapidjson::ParseErrorCode code = d.GetParseError();
-            LOG_ERROR << "parse error: " << code;
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError())
+                      << ", offset: " << d.GetErrorOffset();
         }
     } catch (const std::exception &e) {
         LOG_ERROR << "getStringField exception: " << e.what();
@@ -35,28 +35,29 @@ std::string JSONUtils::getStringField(const std::string &json, const std::string
     return res;
 }
 
-std::vector <std::string> JSONUtils::getStrArrayField(const std::string &json, const std::string &field) {
-    std::vector <std::string> res;
+std::vector<std::string> JSONUtils::getStrArrayField(const std::string &json, const std::string &field) {
+    std::vector<std::string> res;
     try {
         rapidjson::Document d;
         d.Parse(json.c_str());
         if (!d.HasParseError()) {
-            if (d.HasMember(field.c_str()) && d[field.c_str()].IsArray()) {
+            if (d.IsObject() && d.HasMember(field.c_str()) && d[field.c_str()].IsArray()) {
                 for (auto &element : d[field.c_str()].GetArray()) {
                     if (element.IsInt()) {
                         res.emplace_back(std::to_string(element.GetInt()));
                     }
                 }
             } else {
-                LOG_ERROR << "no \"" << field << "\" or its type error!"
+                LOG_ERROR << "this document is an object: " << d.IsObject()
+                          << ", may be no \"" << field << "\" member or not array type"
                           << ", json is: " << json;
             }
         } else {
-            rapidjson::ParseErrorCode code = d.GetParseError();
-            LOG_ERROR << "parse error: " << code;
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError())
+                      << ", offset: " << d.GetErrorOffset();
         }
     } catch (const std::exception &e) {
-        LOG_ERROR << "getStringField exception: " << e.what();
+        LOG_ERROR << "getStrArrayField exception: " << e.what();
         res.clear();
     }
 
@@ -68,7 +69,13 @@ std::string JSONUtils::removeField(const std::string &json, const std::string &f
     try {
         rapidjson::Document d;
         d.Parse(json.c_str());
-        if (d.HasMember(field.c_str())) {
+        if (d.HasParseError()) {
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError())
+                      << ", offset: " << d.GetErrorOffset();
+            return res;
+        }
+
+        if (d.IsObject() && d.HasMember(field.c_str())) {
             d.RemoveMember(field.c_str());
         } else {
 //            LOG_WRAN << "no field to remove: " << field;
@@ -89,14 +96,19 @@ std::string JSONUtils::removeField(const std::string &json, const std::string &f
     return res;
 }
 
-std::string Utils::getProjectionJSON(const std::string &json) {
+std::string JSONUtils::getProjectionJSON(const std::string &json) {
     std::string res;
     try {
         rapidjson::Document d;
         d.Parse(json.c_str());
+        if (d.HasParseError()) {
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError())
+                      << ", offset: " << d.GetErrorOffset();
+            return res;
+        }
 
-        if (d.MemberCount() < 1) {
-            LOG_ERROR << "empty json, can not get projection json";
+        if (!d.IsObject() || d.MemberCount() == 0) {
+            LOG_ERROR << "invalid or empty document, can not get projection json";
             return res;
         }
 
@@ -119,113 +131,281 @@ std::string Utils::getProjectionJSON(const std::string &json) {
     return res;
 }
 
-size_t Utils::getFieldNum(const std::string &json) {
-    if (json.empty()) return 0;
+int JSONUtils::getFieldNum(const std::string &json) {
     try {
         rapidjson::Document d;
         d.Parse(json.c_str());
-        return d.MemberCount();
+        if (d.HasParseError()) {
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError())
+                      << ", offset: " << d.GetErrorOffset();
+            return -1;
+        }
+
+        if (d.IsObject()) {
+            return d.MemberCount();
+        } else {
+            LOG_WARN << "document is not an object";
+            return 0;
+        }
     } catch (const std::exception &e) {
         LOG_ERROR << "getFieldNum exception: " << e.what();
     }
 
-    return 0;
+    return -1;
 }
 
-std::pair<std::string, std::string> Utils::getLeftJoinJSON(const std::string &json1,
+std::pair<std::string, std::string> JSONUtils::getLeftJoinJSON(const std::string &json1,
                                                            const std::string &json2,
-                                                           bool onlyGetDifferent) {
+                                                           bool onlyGetDifferent,
+                                                           double doubleDeviation,
+                                                           const std::set<std::string> &exclusion) {
     std::pair<std::string, std::string> res;
     try {
-        if (json1.empty() || json2.empty()) {
-            if (onlyGetDifferent) { res = std::pair<std::string, std::string>(json1, json2); }
-            return res;
-        }
-
         rapidjson::Document d1, d2, d3, d4;
         d1.Parse(json1.c_str());
         d2.Parse(json2.c_str());
+        if (d1.HasParseError()) {
+            LOG_ERROR << "parse error, d1: " << GetParseError_En(d1.GetParseError())
+                      << ", offset: " << d1.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d1.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d1.SetNull(); }
+            else { return res; }
+        }
+        if (d2.HasParseError()) {
+            LOG_ERROR << "parse error, d2: " << GetParseError_En(d2.GetParseError())
+                      << ", offset: " << d2.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d2.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d2.SetNull(); }
+            else { return res; }
+        }
+
         d3.SetObject();
         d4.SetObject();
-        if (d1 == d2) {
-            if (!onlyGetDifferent) { res = std::pair<std::string, std::string>(json1, json2); }
-            return res;
+        auto countPair = getLeftJoinDocument(d1, d2, d3, d4, onlyGetDifferent, doubleDeviation, exclusion);
+        if (countPair.first > 0) {
+            res = std::pair<std::string, std::string>(documentToJSON(d3), documentToJSON(d4));
         }
-
-//        for (auto it = d1.MemberBegin(); it != d1.MemberEnd();) {
-//            if (d2.HasMember(it->name.GetString()) && (it->value == d2[it->name.GetString()])) {
-//                d1.RemoveMember(it++);
-//                d2.RemoveMember(it->name.GetString());
-//            } else { ++it; }
-//        }
-//
-//        rapidjson::StringBuffer buffer1;
-//        buffer1.Clear();
-//        rapidjson::Writer<rapidjson::StringBuffer> writer1(buffer1);
-//        d1.Accept(writer1);
-//
-//        rapidjson::StringBuffer buffer2;
-//        buffer2.Clear();
-//        rapidjson::Writer<rapidjson::StringBuffer> writer2(buffer2);
-//        d2.Accept(writer2);
-
-//        res = std::pair<std::string, std::string>(std::string(buffer1.GetString()), std::string(buffer2.GetString()));
-
-        for (auto it = d1.MemberBegin(); it != d1.MemberEnd(); ++it) {
-            if (d2.HasMember(it->name)) {
-                if (!onlyGetDifferent || it->value != d2[it->name]) {
-//                    rapidjson::Value n1(it->name, d3.GetAllocator());
-//                    rapidjson::Value n2(std::move(it->name));
-//                    rapidjson::Value v1(std::move(it->value));
-//                    rapidjson::Value v2(std::move(d2[n2.GetString()]));
-//
-//                    LOG_DEBUG << "n1.GetString(): " << n1.GetString();
-//                    LOG_DEBUG << "it->name.GetString(): " <<
-//                              std::string(it->name.IsNull() ? " is null" : it->name.GetString());
-//                    LOG_DEBUG << "n2.GetString(): " << n2.GetString();
-//                    LOG_DEBUG << "it->name.GetString(): " <<
-//                              std::string(it->name.IsNull() ? " is null" : it->name.GetString());
-//
-//                    LOG_DEBUG << "v1.GetString(): " << v1.GetString();
-//                    LOG_DEBUG << "it->value.GetString(): " <<
-//                              std::string(it->value.IsNull() ? " is null" : it->value.GetString());
-//                    LOG_DEBUG << "v2.GetString(): " << v2.GetString();
-//                    LOG_DEBUG << "d2[n2.GetString()].GetString(): " <<
-//                              std::string(d2[n2.GetString()].IsNull() ? " is null" : d2[n2.GetString()].GetString());
-                    d3.AddMember(rapidjson::Value(it->name, d3.GetAllocator()).Move(),
-                                 rapidjson::Value(std::move(it->value)).Move(), d3.GetAllocator());
-                    d4.AddMember(rapidjson::Value(it->name, d4.GetAllocator()).Move(),
-                                 rapidjson::Value(std::move(d2[it->name])).Move(), d4.GetAllocator());
-                }
-            } else {
-                d3.AddMember(rapidjson::Value(std::move(it->name)).Move(),
-                             rapidjson::Value(std::move(it->value)).Move(), d3.GetAllocator());
-            }
-        }
-
-        rapidjson::StringBuffer buffer1, buffer2;
-        rapidjson::Writer<rapidjson::StringBuffer> writer1(buffer1);
-        rapidjson::Writer<rapidjson::StringBuffer> writer2(buffer2);
-        d3.Accept(writer1);
-        d4.Accept(writer2);
-
-        res = std::pair<std::string, std::string>(std::string(buffer1.GetString()), std::string(buffer2.GetString()));
     } catch (const std::exception &e) {
-        LOG_ERROR << "getDifferentFields exception: " << e.what();
+        LOG_ERROR << "getLeftJoinJSON exception: " << e.what();
     }
 
     return res;
 }
 
-bool Utils::isValidJSON(const std::string &json) {
+// countPair.first  required field count
+// countPair.second different field count
+std::pair<int, int> JSONUtils::getLeftJoinDocument(rapidjson::Document &d1, rapidjson::Document &d2,
+                                               rapidjson::Document &d3, rapidjson::Document &d4,
+                                               bool onlyGetDifferent, double doubleDeviation,
+                                               const std::set<std::string> &exclusion) {
+    int count = 0, differentFieldCount = 0;
+    try {
+        if (!d3.IsObject()) {
+            LOG_WARN << "d3 is not an object, reset it";
+            d3.SetObject();
+        }
+        if (!d4.IsObject()) {
+            LOG_WARN << "d4 is not an object, reset it";
+            d4.SetObject();
+        }
+
+        if (d1.IsObject() && d1.MemberCount() > 0) {
+            if (d2.IsObject() && d2.MemberCount() > 0) {
+                bool isDifferent, emptyExclusion = exclusion.empty();
+                for (auto &&it = d1.MemberBegin(); it != d1.MemberEnd(); ++it) {
+                    if (emptyExclusion || exclusion.count(it->name.GetString()) == 0) {
+                        if (d2.HasMember(it->name)) {
+                            isDifferent = (
+                                    // check absolute value great than doubleDeviation,
+                                    // if doubleDeviation <= 0, condition always true
+                                    (it->value.IsDouble() &&
+                                     (fabs(it->value.GetDouble() - d2[it->name].GetDouble()) >= doubleDeviation)) ||
+                                    // check orther value
+                                    (!it->value.IsDouble() && it->value != d2[it->name]));
+                            if (!onlyGetDifferent || isDifferent) {
+                                if (isDifferent) { ++differentFieldCount; }
+                                ++count;
+
+                                d3.AddMember(rapidjson::Value(it->name, d3.GetAllocator()).Move(),
+                                             rapidjson::Value(it->value, d3.GetAllocator()).Move(),
+                                             d3.GetAllocator());
+                                d4.AddMember(rapidjson::Value(it->name, d4.GetAllocator()).Move(),
+                                             rapidjson::Value(d2[it->name], d4.GetAllocator()).Move(),
+                                             d4.GetAllocator());
+                            }
+                        } else {
+                            if (!d3.HasMember(it->name)) {
+                                d3.AddMember(rapidjson::Value(it->name, d3.GetAllocator()).Move(),
+                                             rapidjson::Value(it->value, d3.GetAllocator()).Move(),
+                                             d3.GetAllocator());
+                            }
+                            ++differentFieldCount;
+                            ++count;
+                        }
+                    }
+                }
+            } else {
+                d3.CopyFrom(d1, d3.GetAllocator());
+                for (const auto &field : exclusion) {
+                    if (d3.HasMember(field.c_str())) { d3.RemoveMember(field.c_str()); }
+                }
+                count = differentFieldCount = d3.MemberCount();
+            }
+        }
+    } catch (const std::exception &e) {
+        count = differentFieldCount = -1;
+        LOG_ERROR << "getLeftJoinDocument exception: " << e.what();
+    }
+
+    return std::pair<int, int>(count, differentFieldCount);
+}
+
+bool JSONUtils::isValidJSON(const std::string &json) {
     bool res = false;
     try {
         rapidjson::Document d;
         d.Parse(json.c_str());
-        res = d.IsObject();
+        if (d.HasParseError()) {
+            LOG_ERROR << "parse error: " << GetParseError_En(d.GetParseError()) << ", offset: " << d.GetErrorOffset();
+            return res;
+        }
+        res = d.IsObject(); // if json string is "null", there will no parse error, but d is not an object
     } catch (const std::exception &e) {
         LOG_ERROR << "isValidJSON exception: " << e.what();
     }
+    return res;
+}
+
+bool JSONUtils::isEqualJSON(const std::string &json1, const std::string &json2,
+                        std::pair<std::string, std::string> &differentFieldInJSON,
+                        double doubleDeviation, const std::set<std::string> &exclusion) {
+    bool res = false;
+    try {
+        rapidjson::Document d1, d2, d3, d4;
+        d1.Parse(json1.c_str());
+        d2.Parse(json2.c_str());
+        if (d1.HasParseError()) {
+            LOG_ERROR << "parse error, d1: " << GetParseError_En(d1.GetParseError())
+                      << ", offset: " << d1.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d1.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d1.SetNull(); }
+            else { return res; }
+        }
+        if (d2.HasParseError()) {
+            LOG_ERROR << "parse error, d2: " << GetParseError_En(d2.GetParseError())
+                      << ", offset: " << d2.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d2.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d2.SetNull(); }
+            else { return res; }
+        }
+
+        d3.SetObject();
+        d4.SetObject();
+        d3.AddMember(rapidjson::Value("fieldNumber").Move(),
+                     rapidjson::Value(d1.IsObject() ? d1.MemberCount() : 0).Move(), d3.GetAllocator());
+        d4.AddMember(rapidjson::Value("fieldNumber").Move(),
+                     rapidjson::Value(d2.IsObject() ? d2.MemberCount() : 0).Move(), d4.GetAllocator());
+
+        if (d1 == d2) {
+            res = true;
+        } else {
+            auto countPair = getLeftJoinDocument(d1, d2, d3, d4, true, doubleDeviation, exclusion);
+            auto countLeftUnique = getLeftUniqueDocument(d2, d1, d4, exclusion);
+            res = (countPair.second == 0 && countLeftUnique == 0);
+        }
+        differentFieldInJSON.first = documentToJSON(d3);
+        differentFieldInJSON.second = documentToJSON(d4);
+    } catch (const std::exception &e) {
+        res = false;
+        LOG_ERROR << "isEqualJSON exception: " << e.what();
+    }
+
+    return res;
+}
+
+std::string JSONUtils::getLeftUniqueJSON(const std::string &json1, const std::string &json2,
+                                     const std::set<std::string> &exclusion) {
+    std::string res;
+    try {
+        rapidjson::Document d1, d2, d3;
+        d1.Parse(json1.c_str());
+        d2.Parse(json2.c_str());
+        if (d1.HasParseError()) {
+            LOG_ERROR << "parse error, d1: " << GetParseError_En(d1.GetParseError())
+                      << ", offset: " << d1.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d1.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d1.SetNull(); }
+            else { return res; }
+        }
+        if (d2.HasParseError()) {
+            LOG_ERROR << "parse error, d2: " << GetParseError_En(d2.GetParseError())
+                      << ", offset: " << d2.GetErrorOffset()
+                      << ", will reset null under empty document error";
+            if (d2.GetParseError() == rapidjson::ParseErrorCode::kParseErrorDocumentEmpty) { d2.SetNull(); }
+            else { return res; }
+        }
+
+        d3.SetObject();
+        if (getLeftUniqueDocument(d1, d2, d3, exclusion) > 0) {
+            res = documentToJSON(d3);
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "getLeftUniqueJSON exception: " << e.what();
+    }
+
+    return res;
+}
+
+int JSONUtils::getLeftUniqueDocument(rapidjson::Document &d1, rapidjson::Document &d2,
+                                 rapidjson::Document &d3, const std::set<std::string> &exclusion) {
+    int leftUniqueCount = 0;
+    try {
+        if (!d3.IsObject()) {
+            LOG_WARN << "d3 is not an object, reset it";
+            d3.SetObject();
+        }
+
+        if (d1.IsObject() && d1.MemberCount() > 0) {
+            if (d2.IsObject() && d2.MemberCount() > 0) {
+                bool emptyExclusion = exclusion.empty();
+                for (auto &&it = d1.MemberBegin(); it != d1.MemberEnd(); ++it) {
+                    if ((emptyExclusion || exclusion.count(it->name.GetString()) == 0) && !d2.HasMember(it->name)) {
+                        d3.AddMember(rapidjson::Value(std::move(it->name), d3.GetAllocator()).Move(),
+                                     rapidjson::Value(std::move(it->value), d3.GetAllocator()).Move(),
+                                     d3.GetAllocator());
+                        ++leftUniqueCount;
+                    }
+                }
+            } else {
+                d3.CopyFrom(d1, d3.GetAllocator());
+                for (const auto &field : exclusion) {
+                    if (d3.HasMember(field.c_str())) { d3.RemoveMember(field.c_str()); }
+                }
+                leftUniqueCount = d3.MemberCount();
+            }
+        }
+    } catch (const std::exception &e) {
+        leftUniqueCount = -1;
+        LOG_ERROR << "getLeftUniqueDocument exception: " << e.what();
+    }
+
+    return leftUniqueCount;
+}
+
+std::string JSONUtils::documentToJSON(rapidjson::Document &d, bool permitNullOrEmpty) {
+    std::string res;
+    try {
+        if (permitNullOrEmpty || (d.IsObject() && d.MemberCount() > 0)) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            d.Accept(writer);
+            res = std::string(buffer.GetString());
+        }
+    } catch (const std::exception &e) {
+        res.clear();
+        LOG_ERROR << "documentToJSON exception: " << e.what();
+    }
+
     return res;
 }
 

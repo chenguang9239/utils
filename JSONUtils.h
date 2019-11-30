@@ -6,6 +6,9 @@
 #define CPPSERVER_JSONUTILS_H
 
 #include "commen.h"
+// rapidjson begin
+#include "document.h"
+// rapidjson end
 
 class JSONUtils {
 public:
@@ -18,15 +21,32 @@ public:
 
     static std::string getProjectionJSON(const std::string &json);
 
-    static size_t getFieldNum(const std::string &json);
+    static int getFieldNum(const std::string &json);
 
     static std::pair<std::string, std::string> getLeftJoinJSON(const std::string &json1,
                                                                const std::string &json2,
-                                                               bool onlyGetDifferent = true);
+                                                               bool onlyGetDifferent = true,
+                                                               double doubleDeviation = 0.0001,
+                                                               const std::set<std::string> &exclusion = {});
+
+    static std::pair<int, int> getLeftJoinDocument(rapidjson::Document &d1, rapidjson::Document &d2,
+                                                   rapidjson::Document &d3, rapidjson::Document &d4,
+                                                   bool onlyGetDifferent = true, double doubleDeviation = 0.0001,
+                                                   const std::set<std::string> &exclusion = {});
 
     static bool isValidJSON(const std::string &json);
 
-    static std::string replaceChar(const std::string &s, char target, char with);
+    static bool isEqualJSON(const std::string &json1, const std::string &json2,
+                            std::pair<std::string, std::string> &differentFieldInJSON,
+                            double doubleDeviation = 0.0001, const std::set<std::string> &exclusion = {});
+
+    static std::string getLeftUniqueJSON(const std::string &json1, const std::string &json2,
+                                         const std::set<std::string> &exclusion = {});
+
+    static int getLeftUniqueDocument(rapidjson::Document &d1, rapidjson::Document &d2,
+                                     rapidjson::Document &d3, const std::set<std::string> &exclusion = {});
+
+    static std::string documentToJSON(rapidjson::Document &d, bool permitNullOrEmpty = false);
 };
 
 #endif //CPPSERVER_JSONUTILS_H
