@@ -267,7 +267,7 @@ bool mongoDAO::upsert(const std::string &mongoParam, std::string &json, std::str
         writer.Key("timestamp");
         writer.StartObject();
         writer.Key("$date");
-        writer.Uint64(dateUtil::ISOCurMsSecondTimeStamp());
+        writer.Uint64(dateUtil::UTCCurMsSecondTimeStamp());
         writer.EndObject();
         writer.EndObject();
         response = std::string(strBuffer.GetString());
@@ -413,7 +413,7 @@ bool mongoDAO::innerUpdate(const std::string &docID,
             writer.Key("timestamp");
             writer.StartObject();
             writer.Key("$date");
-            writer.Uint64(dateUtil::ISOCurMsSecondTimeStamp());
+            writer.Uint64(dateUtil::UTCCurMsSecondTimeStamp());
             writer.EndObject();
             if (res) {
                 writer.Key("DBName");
@@ -485,7 +485,7 @@ bool mongoDAO::find(const std::string &docID, std::string &response) {
         writer.Key("timestamp");
         writer.StartObject();
         writer.Key("$date");
-        writer.Uint64(dateUtil::ISOCurMsSecondTimeStamp());
+        writer.Uint64(dateUtil::UTCCurMsSecondTimeStamp());
         writer.EndObject();
         writer.EndObject();
         response = std::string(strBuffer.GetString());
@@ -547,7 +547,7 @@ bool mongoDAO::innerFind(const std::string &docID,
             writer.Key("timestamp");
             writer.StartObject();
             writer.Key("$date");
-            writer.Uint64(dateUtil::ISOCurMsSecondTimeStamp());
+            writer.Uint64(dateUtil::UTCCurMsSecondTimeStamp());
             writer.EndObject();
             if (res) {
                 writer.Key("DBName");
@@ -651,7 +651,7 @@ bool mongoDAO::innerFind(const std::string &docID,
 //            writer.Key("timestamp");
 //            writer.StartObject();
 //            writer.Key("$date");
-//            writer.Uint64(dateUtil::ISOCurMsSecondTimeStamp());
+//            writer.Uint64(dateUtil::UTCCurMsSecondTimeStamp());
 //            writer.EndObject();
 //            if (res) {
 //                writer.Key("DBName");

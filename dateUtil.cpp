@@ -8,7 +8,7 @@
 #include <chrono>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-uint64_t dateUtil::ISOTimeToMsTimeStamp(const std::string &dateStr) {
+uint64_t dateUtil::UTCTimeToMsTimeStamp(const std::string &dateStr) {
     const static boost::posix_time::ptime time_t_epoch =
             boost::posix_time::time_from_string("1970-01-01 00:00:00");
 
@@ -21,10 +21,10 @@ uint64_t dateUtil::ISOTimeToMsTimeStamp(const std::string &dateStr) {
 // 将local date按照ISO date获取到时间戳后，需要减掉8小时，才是真正的当前时间戳
 uint64_t dateUtil::localTimeToMsTimeStamp(const std::string &dateStr) {
     static uint64_t diff = (uint64_t) 1000 * 3600 * 8;
-    return ISOTimeToMsTimeStamp(dateStr) - diff;
+    return UTCTimeToMsTimeStamp(dateStr) - diff;
 }
 
-std::string dateUtil::JSONTimeToISODate(const std::string &JSONDate) {
+std::string dateUtil::JSONTimeToISOTime(const std::string &JSONDate) {
     std::string res;
     auto v = Utils::splitString(JSONDate, " [,.|-/_]\"\\");
 
@@ -45,7 +45,7 @@ std::string dateUtil::JSONTimeToISODate(const std::string &JSONDate) {
 
 
 // 另一种方法
-//uint64_t dateUtil::ISODateToMsTimeStamp(const std::string &dateStr) {
+//uint64_t dateUtil::UTCDateToMsTimeStamp(const std::string &dateStr) {
 //    const static boost::posix_time::ptime time_t_epoch =
 //            boost::posix_time::time_from_string("1970-01-01 00:00:00");
 //
@@ -95,19 +95,45 @@ uint64_t dateUtil::curSecondTimeStamp() {
 }
 
 uint64_t dateUtil::curMsSecondTimeStamp() {
-    return (uint64_t) 1000 * curSecondTimeStamp();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 // 北京时区是东八区，领先UTC 8个小时
-// 由于mongo日期类型显示为ISO日期，将当前时间戳写入mongo后显示的就是当前时间对应的ISO时间：当前时间-8小时
+// 由于mongo日期类型显示为UTC日期，将当前时间戳写入mongo后显示的就是当前时间对应的UTC时间：当前时间-8小时
 // 为方便查看，将当前时间戳加上8小时，写入mongo中
 // 其实是一个假的当前时间戳
-uint64_t dateUtil::ISOCurSecondTimeStamp() {
+uint64_t dateUtil::UTCCurSecondTimeStamp() {
     static uint64_t diff = (uint64_t) 3600 * 8;
     return curSecondTimeStamp() + diff;
 }
 
-uint64_t dateUtil::ISOCurMsSecondTimeStamp() {
+uint64_t dateUtil::UTCCurMsSecondTimeStamp() {
     static uint64_t diff = (uint64_t) 1000 * 3600 * 8;
     return curMsSecondTimeStamp() + diff;
+}
+
+std::string dateUtil::curLocalTime() {
+//    // 2020-Jan-09 20:04:36
+//    std::cout << boost::posix_time::to_simple_string(boost::posix_time::second_clock::local_time()) << std::endl;
+//    // 20200109T200436
+//    std::cout << boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) << std::endl;
+//    // 2020-01-09T20:04:36
+//    std::cout << boost::posix_time::to_iso_extended_string(boost::posix_time::second_clock::local_time()) << std::endl;
+
+    std::string res = boost::posix_time::to_iso_extended_string(boost::posix_time::second_clock::local_time());
+    if (res.size() > 10) {
+        res[10] = ' ';
+    } else { res.clear(); }
+
+    return res;
+}
+
+std::string dateUtil::curUTCTime() {
+    std::string res = boost::posix_time::to_iso_extended_string(boost::posix_time::second_clock::universal_time());
+    if (res.size() > 10) {
+        res[10] = ' ';
+    } else { res.clear(); }
+
+    return res;
 }

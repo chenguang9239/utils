@@ -9,13 +9,13 @@
 
 class dateUtil {
 public:
-    static uint64_t ISOTimeToMsTimeStamp(const std::string &dateStr);
+    static uint64_t UTCTimeToMsTimeStamp(const std::string &dateStr);
 
     static uint64_t localTimeToMsTimeStamp(const std::string &dateStr);
 
-    static std::string JSONTimeToISODate(const std::string &JSONDate);
+    static std::string JSONTimeToISOTime(const std::string &JSONDate);
 
-//    static uint64_t ISOTimeToMsTimeStamp(const std::string &dateStr);
+//    static uint64_t UTCTimeToMsTimeStamp(const std::string &dateStr);
 
 //    static std::string JSONDateToDate(const std::string &JSONDate);
 
@@ -25,9 +25,13 @@ public:
 
     static uint64_t curMsSecondTimeStamp();
 
-    static uint64_t ISOCurSecondTimeStamp();
+    static uint64_t UTCCurSecondTimeStamp();
 
-    static uint64_t ISOCurMsSecondTimeStamp();
+    static uint64_t UTCCurMsSecondTimeStamp();
+
+    static std::string curLocalTime();
+
+    static std::string curUTCTime();
 };
 
 
