@@ -215,13 +215,7 @@ std::pair<int, int> JSONUtils::getLeftJoinDocument(rapidjson::Document &d1, rapi
                 for (auto &&it = d1.MemberBegin(); it != d1.MemberEnd(); ++it) {
                     if (emptyExclusion || exclusion.count(it->name.GetString()) == 0) {
                         if (d2.HasMember(it->name)) {
-                            isDifferent = (
-                                    // check absolute value great than doubleDeviation,
-                                    // if doubleDeviation <= 0, condition always true
-                                    (it->value.IsDouble() &&
-                                     (fabs(it->value.GetDouble() - d2[it->name].GetDouble()) >= doubleDeviation)) ||
-                                    // check orther value
-                                    (!it->value.IsDouble() && it->value != d2[it->name]));
+                            isDifferent = checkDifferent(it->value, d2[it->name], doubleDeviation);
                             if (!onlyGetDifferent || isDifferent) {
                                 if (isDifferent) { ++differentFieldCount; }
                                 ++count;
@@ -409,3 +403,33 @@ std::string JSONUtils::documentToJSON(rapidjson::Document &d, bool permitNullOrE
     return res;
 }
 
+bool Utils::checkDifferent(const rapidjson::Value &v1, const rapidjson::Value &v2, double doubleDeviation) {
+    bool isDifferent = false;
+    if (v1.IsDouble() && v2.IsDouble()) {
+        isDifferent = (fabs(v1.GetDouble() - v2.GetDouble()) >= doubleDeviation);
+    } else if (v1.IsArray() && v2.IsArray()) {
+        auto array1 = v1.GetArray();
+        auto array2 = v2.GetArray();
+        isDifferent = array1.Size() != array2.Size();
+        if (!isDifferent) {
+            for (rapidjson::SizeType i = 0, n = array1.Size(); i < n; ++i) {
+                isDifferent = checkDifferent(array1[i], array2[i], doubleDeviation);
+                if (isDifferent) break;
+            }
+        }
+    } else if (v1.IsObject() && v2.IsObject()) {
+        auto obj1 = v1.GetObject();
+        auto obj2 = v2.GetObject();
+        isDifferent = obj1.MemberCount() != obj2.MemberCount();
+        if (!isDifferent) {
+            for (auto it1 = obj1.MemberBegin(); it1 != obj1.MemberEnd(); ++it1) {
+                isDifferent = !obj2.HasMember(it1->name) ||
+                              checkDifferent(it1->value, obj2.FindMember(it1->name)->value, doubleDeviation);
+                if (isDifferent) break;
+            }
+        }
+    } else {
+        isDifferent = v1 != v2;
+    }
+    return isDifferent;
+}
