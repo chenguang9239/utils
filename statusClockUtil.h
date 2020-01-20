@@ -32,9 +32,13 @@ public:
 
     long long int getStatusClock(const std::string &status);
 
+    void init();
+
     void run();
 
     void innerRun();
+
+    void runOneStep();
 
     void stop() { running = false; }
 };

@@ -16,43 +16,55 @@ void statusClockUtil::run() {
     innerRunExecutor = std::thread(&statusClockUtil::innerRun, this);
 }
 
-void statusClockUtil::innerRun() {
-    std::string tmpCurStatus;
+void statusClockUtil::init() {
     if (checkFunc != nullptr) {
         curStatus = checkFunc();
         statusClocks[curStatus] = std::make_shared<clockUtilX>();
+    }
+}
+
+void statusClockUtil::innerRun() {
+    std::string tmpCurStatus;
+    if (checkFunc != nullptr) {
+        init();
         while (running) {
-            tmpCurStatus = checkFunc();
-            if (tmpCurStatus != curStatus) {
-                if (statusClocks.count(tmpCurStatus) < 1) {
-                    boost::unique_lock<boost::shared_mutex> g(statusClocksMtx);
-                    statusClocks[tmpCurStatus] = std::make_shared<clockUtilX>();
-                }
-
-                if (statusClocks.count(tmpCurStatus) == 1) {
-                    statusClocks[tmpCurStatus]->reStart();
-                } else {
-                    LOG_ERROR << "add status failed: " << tmpCurStatus;
-                }
-
-                if (statusClocks.count(curStatus) == 1) {
-                    statusClocks[curStatus]->stop();
-                } else {
-                    LOG_ERROR << "curStatus not exists: " << curStatus;
-                }
-
-                LOG_SPCL << "status changed, tmpCurStatus: " << tmpCurStatus
-                         << ", tmpCurStatus clock: " << getStatusClock(tmpCurStatus)
-                         << ", curStatus: " << curStatus
-                         << ", curStatus clock: " << getStatusClock(curStatus);
-                curStatus = tmpCurStatus;
-            } else {
-                LOG_INFO << "status not changed, tmpCurStatus: " << tmpCurStatus
-                         << ", tmpCurStatus clock: " << getStatusClock(tmpCurStatus)
-                         << ", curStatus: " << curStatus
-                         << ", curStatus clock: " << getStatusClock(curStatus);
-            }
+            runOneStep();
             sleep(checkPeriod);
+        }
+    }
+}
+
+void statusClockUtil::runOneStep() {
+    if (checkFunc != nullptr) {
+        std::string tmpCurStatus = checkFunc();
+        if (tmpCurStatus != curStatus) {
+            if (statusClocks.count(tmpCurStatus) < 1) {
+                boost::unique_lock<boost::shared_mutex> g(statusClocksMtx);
+                statusClocks[tmpCurStatus] = std::make_shared<clockUtilX>();
+            }
+
+            if (statusClocks.count(tmpCurStatus) == 1) {
+                statusClocks[tmpCurStatus]->reStart();
+            } else {
+                LOG_ERROR << "add status failed: " << tmpCurStatus;
+            }
+
+            if (statusClocks.count(curStatus) == 1) {
+                statusClocks[curStatus]->stop();
+            } else {
+                LOG_ERROR << "curStatus not exists: " << curStatus;
+            }
+
+            LOG_SPCL << "status changed, tmpCurStatus: " << tmpCurStatus
+                     << ", tmpCurStatus clock: " << getStatusClock(tmpCurStatus)
+                     << ", curStatus: " << curStatus
+                     << ", curStatus clock: " << getStatusClock(curStatus);
+            curStatus = tmpCurStatus;
+        } else {
+            LOG_INFO << "status not changed, tmpCurStatus: " << tmpCurStatus
+                     << ", tmpCurStatus clock: " << getStatusClock(tmpCurStatus)
+                     << ", curStatus: " << curStatus
+                     << ", curStatus clock: " << getStatusClock(curStatus);
         }
     }
 }
