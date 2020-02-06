@@ -403,7 +403,7 @@ std::string JSONUtils::documentToJSON(rapidjson::Document &d, bool permitNullOrE
     return res;
 }
 
-bool Utils::checkDifferent(const rapidjson::Value &v1, const rapidjson::Value &v2, double doubleDeviation) {
+bool JSONUtils::checkDifferent(const rapidjson::Value &v1, const rapidjson::Value &v2, double doubleDeviation) {
     bool isDifferent = false;
     if (v1.IsDouble() && v2.IsDouble()) {
         isDifferent = (fabs(v1.GetDouble() - v2.GetDouble()) >= doubleDeviation);
@@ -432,4 +432,8 @@ bool Utils::checkDifferent(const rapidjson::Value &v1, const rapidjson::Value &v
         isDifferent = v1 != v2;
     }
     return isDifferent;
+}
+
+std::string JSONUtils::cvtToJSONStrValue(const std::string &s) {
+    return "\"" + s + "\"";
 }

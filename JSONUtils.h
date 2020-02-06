@@ -49,6 +49,8 @@ public:
     static std::string documentToJSON(rapidjson::Document &d, bool permitNullOrEmpty = false);
 
     static bool checkDifferent(const rapidjson::Value& v1, const rapidjson::Value& v2, double doubleDeviation);
+    
+    static std::string cvtToJSONStrValue(const std::string &s);
 };
 
 #endif //CPPSERVER_JSONUTILS_H
