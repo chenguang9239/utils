@@ -6,6 +6,7 @@
 #define DOC_FEATURE_MONGO_WRITER_CPP_DATEUTIL_H
 
 #include <string>
+#include <ctime>
 
 class dateUtil {
 public:
@@ -32,6 +33,10 @@ public:
     static std::string curLocalTime();
 
     static std::string curUTCTime();
+
+    static std::string timeStampToLocalTime(std::time_t timeStamp);
+
+    static std::string timeStampToUTCTime(std::time_t timeStamp);
 };
 
 

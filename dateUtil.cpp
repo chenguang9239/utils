@@ -137,3 +137,42 @@ std::string dateUtil::curUTCTime() {
 
     return res;
 }
+
+std::string dateUtil::timeStampToLocalTime(std::time_t timeStamp) {
+    std::string res = boost::posix_time::to_iso_extended_string(
+            boost::posix_time::from_time_t(timeStamp + 8 * 60 * 60));
+    if (res.size() > 10) {
+        res[10] = ' ';
+    } else { res.clear(); }
+
+    return res;
+}
+
+std::string dateUtil::timeStampToUTCTime(std::time_t timeStamp) {
+    std::string res = boost::posix_time::to_iso_extended_string(boost::posix_time::from_time_t(timeStamp));
+    if (res.size() > 10) {
+        res[10] = ' ';
+    } else { res.clear(); }
+
+    return res;
+}
+
+//std::string timeStampToLocalTime(std::time_t timeStamp) {
+//    std::string timeStr;
+//    try {
+//        auto newTimeStamp = timeStamp + 8 * 60 * 60; //此处转化为东八区北京时间，如果是其它时区需要按需求修改
+//        auto mTime = std::chrono::seconds(newTimeStamp);
+//        auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>(mTime);
+//        auto tt = std::chrono::system_clock::to_time_t(tp);
+//        std::tm *now = std::gmtime(&tt);
+//        timeStr = std::string(std::to_string(now->tm_year + 1900) + "_" +
+//                              std::to_string(now->tm_mon + 1) + "_" +
+//                              std::to_string(now->tm_mday) + "_" +
+//                              std::to_string(now->tm_hour) + "_" +
+//                              std::to_string(now->tm_min) + "_" +
+//                              std::to_string(now->tm_sec));
+//    } catch (const std::exception &e) {
+//        LOG_ERROR << "exception: " << e.what();
+//    }
+//    return timeStr;
+//}
