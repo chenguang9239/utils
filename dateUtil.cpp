@@ -12,7 +12,10 @@ uint64_t dateUtil::UTCTimeToMsTimeStamp(const std::string &dateStr) {
     const static boost::posix_time::ptime time_t_epoch =
             boost::posix_time::time_from_string("1970-01-01 00:00:00");
 
-    auto p1 = boost::posix_time::from_iso_string(dateStr);
+    // todo check dateStr is ISO date string, like: dateStr[10] == 'T'
+    //    auto p1 = boost::posix_time::from_iso_string(dateStr);
+
+    auto p1 = boost::posix_time::time_from_string(dateStr);
 
     return (p1 - time_t_epoch).total_milliseconds();
 }
