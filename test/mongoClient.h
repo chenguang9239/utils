@@ -10,8 +10,6 @@
 #include <mongocxx/collection.hpp>
 
 class mongoClient {
-    mongocxx::instance inst;
-
     std::string collectionName;
     std::string DBName;
     std::string mongoAddress;

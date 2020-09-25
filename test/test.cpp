@@ -23,6 +23,7 @@
 
 #include "diff.h"
 #include "remove.h"
+#include "upsertUtil.h"
 #include "functionTest.h"
 
 
@@ -36,12 +37,21 @@ int main() {
 
 //    functionTest::runTest();
 
-    diff diffInst("testDocument", "testDB",
-                  "mongodb://xxxxxxxxxxx",
-                  "document", "DB",
-                  "mongodb://xxxxxxxxxxxyyyyyyyyy");
-    diffInst.init();
-    diffInst.checkDifferentDocRealTimely();
+//    diff diffInst("testDocument", "testDB",
+//                  "mongodb://xxxxxxxxxxx",
+//                  "document", "DB",
+//                  "mongodb://xxxxxxxxxxxyyyyyyyyy");
+//    diffInst.init();
+//    diffInst.checkDifferentDocRealTimely();
+
+
+//std::cout << dateUtil::localTimeToMsTimeStamp("2020-02-05 16:27:01") << std::endl;
+
+//    upsertUtil upsertUtilInst("db", "doc", "mongo_addr");
+
+//    upsertUtilInst.cvtDateStrToTimeStamp("./docIds_test.txt", "date");
+
+//    upsertUtilInst.cvtDateStrToTimeStamp("./docIds_uniq.txt", "date");
 
     return 0;
 }
