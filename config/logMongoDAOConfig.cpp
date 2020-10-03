@@ -21,12 +21,9 @@ logMongoDAOConfig::logMongoDAOConfig() :
         config.lookupValue("mongo_conn_per_host", mongoConfig.connPerHost);
         config.lookupValue("mongo_db_log", mongoDBLog);
         config.lookupValue("mongo_collection_log", mongoCollectionLog);
-
-        mongoConfig.address = MongoConfig::parseAddresses(mongoConfig.address);
-
-        if (mongoConfig.address.empty() || mongoConfig.address == "mongodb://") {
-            LOG_ERROR << "mongoAddress empty? mongoAddress: " << mongoConfig.address;
-        }
+        config.lookupValue("mongo_user_name", mongoConfig.userName);
+        config.lookupValue("mongo_pass_word", mongoConfig.passWord);
+        config.lookupValue("mongo_auth_source", mongoConfig.authSource);
 
         if (mongoDBLog.empty()) {
             mongoDBLog = "test-log";
@@ -39,6 +36,8 @@ logMongoDAOConfig::logMongoDAOConfig() :
         LOG_SPCL << "mongoAddress: " << mongoConfig.address;
         LOG_SPCL << "mongoDBLog: " << mongoDBLog;
         LOG_SPCL << "mongoCollectionLog: " << mongoCollectionLog;
+
+        mongoConfig.parseURI();
     } catch (const libconfig::SettingNotFoundException &nfex) {
         LOG_ERROR << "read config of " << configKey << " error: " << nfex.what();
     }

@@ -41,13 +41,7 @@ using bsoncxx::builder::stream::close_document;
 
 mongoDAO::mongoDAO() : normalConnWaitingNum(0) {
     {
-        std::stringstream options;
-        options << "/?connectTimeoutMS=" << dataConf.mongoConfig.connTimeout
-                << "&socketTimeoutMS=" << dataConf.mongoConfig.socketTimeout
-                << "&readPreference=secondaryPreferred"
-                << "&maxPoolSize=" << dataConf.mongoConfig.connPerHost;
-
-        mongocxx::uri nomalMongoUri{dataConf.mongoConfig.address + options.str()};
+        mongocxx::uri nomalMongoUri{dataConf.mongoConfig.uri};
         LOG_SPCL << "nomalMongoUri: " << nomalMongoUri.to_string();
         LOG_DEBUG << bsoncxx::to_json(nomalMongoUri.options());
 
@@ -60,13 +54,7 @@ mongoDAO::mongoDAO() : normalConnWaitingNum(0) {
     }
 
     {
-        std::stringstream options;
-        options << "/?connectTimeoutMS=" << logConf.mongoConfig.connTimeout
-                << "&socketTimeoutMS=" << logConf.mongoConfig.socketTimeout
-                << "&readPreference=secondaryPreferred"
-                << "&maxPoolSize=" << logConf.mongoConfig.connPerHost;
-
-        mongocxx::uri logMongoUri{logConf.mongoConfig.address + options.str()};
+        mongocxx::uri logMongoUri{logConf.mongoConfig.uri};
         LOG_SPCL << "logMongoUri: " << logMongoUri.to_string();
         LOG_DEBUG << bsoncxx::to_json(logMongoUri.options());
 

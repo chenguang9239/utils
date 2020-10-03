@@ -8,23 +8,30 @@
 #include <string>
 
 class MongoConfig {
-public:
-    std::string address;
-    int socketTimeout;
-    int connTimeout;
-    int connPerHost;
+ public:
+  std::string address;
+  std::string userName;
+  std::string passWord;
+  std::string authSource;
+  std::string uri;
+  int socketTimeout;
+  int connTimeout;
+  int connPerHost;
 
-    MongoConfig() = default;
 
-    MongoConfig(const std::string &address,
-                int socketTimeout,
-                int connTimeout,
-                int connPerHost);
+  MongoConfig() = default;
 
-    static int getMongoPort(std::string &address);
+  MongoConfig(const std::string &address,
+              int socketTimeout,
+              int connTimeout,
+              int connPerHost);
 
-    static std::string parseAddresses(const std::string &addresses);
+  static int getMongoPort(std::string &address);
+
+  std::string parseURI();
+
+  static std::string percentEncode(const std::string &s);
 };
 
 
-#endif //CPP_MONGOCONFIG_H
+#endif //DOC_FEATURE_MONGO_WRITER_CPP_MONGOCONFIG_H
