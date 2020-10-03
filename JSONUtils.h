@@ -51,6 +51,10 @@ public:
     static bool checkDifferent(const rapidjson::Value& v1, const rapidjson::Value& v2, double doubleDeviation);
     
     static std::string cvtToJSONStrValue(const std::string &s);
+
+    static bool JSONToDocument(const std::string &json, rapidjson::Document& d);
+
+    static bool AddMongoDateStr(rapidjson::Document &d);
 };
 
 #endif //CPPSERVER_JSONUTILS_H
