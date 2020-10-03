@@ -82,7 +82,7 @@ mongoDAO::mongoDAO() : normalConnWaitingNum(0) {
     upsertFalse.upsert(false);
 }
 
-bool mongoDAO::insert(const std::string &json) {
+bool mongoDAO::insertLog(const std::string &json) {
     static reportUtil *reportPtr = reportUtil::getInstance();
     static std::string insertLogMetric("insertLog");
     static std::string insertLogErrorMetric = insertLogMetric + ".error";
@@ -120,6 +120,75 @@ bool mongoDAO::insert(const std::string &json) {
     reportPtr->sendRatioReport(insertLogErrorMetric, res ? 0 : 100);
     reportPtr->sendBatchSizeReport(insertLogErrorMetric, res ? 0 : 1);
     reportPtr->sendLatencyReport(insertLogMetric, watch.elapsed());
+    return res;
+}
+
+bool mongoDAO::findLogs(const std::string &docID, std::string &response) {
+    static reportUtil *reportPtr = reportUtil::getInstance();
+    static executorUtil *executorPtr = executorUtil::getInstance();
+
+    clockUtil watch;
+    bool res = false;
+
+    try {
+        if (!docID.empty()) {
+            std::string operation("find_log_failed");
+            long long int findTime = 0;
+
+            try {
+                clockUtil watch;
+                auto entry = logConnPool->acquire();
+                auto cursor = (*entry)[logConf.mongoDBLog][logConf.mongoCollectionLog].find(make_document(kvp("docID", docID)));
+                findTime = watch.elapsed();
+
+                if (cursor.begin() != cursor.end()) {
+                    std::string log_str;
+                    rapidjson::StringBuffer strBuffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(strBuffer);
+                    writer.StartObject();
+                    writer.Key("upsert_logs");
+                    writer.StartArray();
+
+                    for (auto &log : cursor) {
+                        rapidjson::Document d;
+                        Utils::JSONToDocument(bsoncxx::to_json(log), d);
+                        if (Utils::AddMongoDateStr(d)) {
+                            LOG_DEBUG << "add mongo date ok";
+                        }
+                        log_str = Utils::documentToJSON(d);
+
+                        writer.RawValue(log_str.c_str(),
+                                        log_str.size(), rapidjson::Type::kObjectType);
+                    }
+
+                    writer.EndArray();
+                    writer.EndObject();
+                    response = std::string(strBuffer.GetString());
+                } else {
+                    LOG_ERROR << "cannot find in DBName: " << logConf.mongoDBLog
+                              << ", collName: " << logConf.mongoCollectionLog << ", docID:" << docID;
+                }
+
+                res = true;
+                operation = "find_log";
+            } catch (const mongocxx::exception &e) {
+                LOG_ERROR << "An exception occurred: " << e.what() << ", docID:" << docID;
+            } catch (const std::exception &e) {
+                LOG_ERROR << "exception: " << e.what() << ", docID:" << docID;
+            }
+
+            std::string allMetric = operation;
+            reportPtr->sendQPSReport(allMetric);
+            reportPtr->sendLatencyReport(allMetric, findTime);
+            reportPtr->sendRatioReport(allMetric + ".error", res ? 0 : 100);
+        } else {
+            LOG_ERROR << "docID  empty!";
+        }
+    } catch (const std::exception &e) {
+        LOG_ERROR << "exception: " << e.what() << ", docID:" << docID;
+        res = false;
+    }
+
     return res;
 }
 
@@ -277,7 +346,7 @@ bool mongoDAO::upsert(const std::string &mongoParam, std::string &json, std::str
 
     // insert log to mongo
     if (executorPtr) {
-        executorPtr->storeLogExecutor.push(std::bind(&mongoDAO::insert, this, response));
+        executorPtr->storeLogExecutor.push(std::bind(&mongoDAO::insertLog, this, response));
     } else { LOG_ERROR << "executorPtr is nullptr, can not store log to mongo"; }
 
     return res;
@@ -495,7 +564,7 @@ bool mongoDAO::find(const std::string &docID, std::string &response) {
 
     // insert log to mongo
     if (executorPtr) {
-        executorPtr->storeLogExecutor.push(std::bind(&mongoDAO::insert, this, response));
+        executorPtr->storeLogExecutor.push(std::bind(&mongoDAO::insertLog, this, response));
     } else { LOG_ERROR << "executorPtr is nullptr, can not store log to mongo"; }
 
     return res;

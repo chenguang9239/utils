@@ -58,7 +58,9 @@ class mongoDAO {
 public:
     mongoDAO();
 
-    bool insert(const std::string &json);
+    bool insertLog(const std::string &json);
+
+    bool findLogs(const std::string &docID, std::string &response);
 
     bool remove(const std::string &id);
 
