@@ -86,6 +86,8 @@ public:
                    std::string &log,
                    bool generateLog = true);
 
+    bool findMulti(const std::vector<std::string> &ids, std::string &response);
+
 //    bsoncxx::document::value fromJSON(const std::string &json);
 
     static mongoDAO *getInstance();

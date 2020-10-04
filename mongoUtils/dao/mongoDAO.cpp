@@ -787,3 +787,48 @@ mongoDAO *mongoDAO::getInstance() {
     return &inst;
 }
 
+using ::bsoncxx::builder::basic;
+using ::bsoncxx::document::value;
+using ::bsoncxx::document::view;
+using ::bsoncxx::stdx::optional;
+
+bool mongoDAO::findMulti(const std::vector<std::string> &ids,
+                         std::string &response) {
+    bool res = false;
+    try {
+        bsoncxx::builder::basic::array arr;
+        for (auto &id : ids) {
+            arr.append(id);
+        }
+
+        auto entry = normalConnPool->acquire();
+        auto cursor = (*entry)[dataConf.mongoDBX][dataConf.mongoCollectionX].find(
+            make_document(kvp("_id", make_document(kvp("$in", arr)))));
+
+        if (cursor.begin() == cursor.end()) {
+            LOG_WARN << "can not get data, invalid cursor!";
+        }
+
+        rapidjson::StringBuffer strBuffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(strBuffer);
+        writer.StartObject();
+        writer.Key("data");
+        writer.StartArray();
+
+        for (const view &doc : cursor) {
+            //        res.emplace_back(optional<value>(bsoncxx::from_json(bsoncxx::to_json(doc))));
+            std::string doc_str = bsoncxx::to_json(doc);
+            writer.RawValue(doc_str.c_str(), doc_str.size(),
+                            rapidjson::Type::kObjectType);
+        }
+
+        writer.EndArray();
+        writer.EndObject();
+        response = std::string(strBuffer.GetString());
+        res = true;
+    } catch (const std::exception &e) {
+        LOG_ERROR << "exception: " << e.what() << ", docID:" << docID;
+    }
+
+    return res;
+}
