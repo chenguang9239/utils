@@ -4,6 +4,7 @@
 
 #include "commenUtils.h"
 #include "commen.h"
+#include <stdint.h>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
 
@@ -389,6 +390,30 @@ std::string Utils::replaceChar(const std::string &s, char target, char with) {
     std::string res = s;
     for (auto &e : res) {
         if (e == target) { e = with; }
+    }
+    return res;
+}
+
+union IntFloatBits {
+  int32_t int_bits;
+  float float_bits;
+};
+
+float Utils::IntBitsToFloat(int32_t x) {
+    union IntFloatBits bits;
+    bits.int_bits = x;
+    return bits.float_bits;
+}
+
+std::vector<float> Utils::Bytes2Floats(const std::string &bytes) {
+    std::vector<float> res(bytes.size() / 4);
+    for (int i = 0; i < res.size() && i * 4 + 3 < bytes.size(); ++i) {
+        int loc = i * 4;
+        int32_t accum = (bytes[loc] & 255) << 0;
+        accum |= (bytes[loc + 1] & 255) << 8;
+        accum |= (bytes[loc + 2] & 255) << 16;
+        accum |= (bytes[loc + 3] & 255) << 24;
+        res[i] = IntBitsToFloat(accum);
     }
     return res;
 }

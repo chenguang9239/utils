@@ -98,6 +98,10 @@ public:
     static std::vector<T> appendVector(const std::vector<T> &a, const std::vector<T> &b);
 
     static std::string replaceChar(const std::string &s, char target, char with);
+
+    static float Utils::IntBitsToFloat(int32_t x);
+
+    static std::vector<float> Utils::Bytes2Floats(const std::string &bytes);
 };
 
 template<typename K, typename V>
