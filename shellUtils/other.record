@@ -1,0 +1,2 @@
+
+while read line; do if [ "X`cat 2 | grep -w $line | wc -l`" != "X1" ]; then echo $line; fi; done < 1
