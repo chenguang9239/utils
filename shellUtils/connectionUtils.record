@@ -11,3 +11,5 @@ netstat -n | awk '/^tcp/ {++S[$NF]};END {for(a in S) print a, S[a]}'
 
 echo "对来到指定网卡 并且到指定端口的包 抓1000个包，按对端IP计数+排序，可能对机器性能有一定影响"
 tcpdump -i eth4 -tnn dst port 2644 -c 1000 | awk -F"." '{print $1"."$2"."$3"."$4}' | sort | uniq -c | sort -nr
+
+tcpdump -i eth4 tcp port 5050 -n -s 0 -w ./tcp.cap
