@@ -1,2 +1,5 @@
 
 while read line; do if [ "X`cat 2 | grep -w $line | wc -l`" != "X1" ]; then echo $line; fi; done < 1
+
+# 只保留时间最近的一个core
+ls -lt ./core.* 2>/dev/null | awk '{if(NR>1){print $9}}' | xargs rm -rf
