@@ -28,13 +28,19 @@ def get(params):
     return res.read()
 
 def parse(json_str):
+    ip_list = []
     json_obj = json.loads(json_str)
     if json_obj.has_key("results"):
         for result in json_obj["results"]:
             if result.has_key("nics"):
                 for nic in result["nics"]:
                     if nic.has_key("ipv4"):
-                        print nic["ipv4"]
+                        #print nic["ipv4"]
+                        ip_list.append(nic["ipv4"])
+    print len(ip_list)
+    ip_list.sort()
+    for ip in ip_list:
+        print ip
 
 
 def main(argv):
