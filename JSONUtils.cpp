@@ -553,3 +553,26 @@ bool JSONUtils::AddMongoDateStr(rapidjson::Document &d) {
   }
   return res;
 }
+
+std::string JSONUtils::getObjectField(const std::string &json, const std::string &field) {
+  std::string res;
+  try {
+    rapidjson::Document d;
+    d.Parse(json.c_str());
+    if (!d.HasParseError()) {
+      if (d.HasMember(field.c_str()) && d[field.c_str()].IsObject()) {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        d[field.c_str()].Accept(writer);
+        res = buffer.GetString();
+      }
+    } else {
+      rapidjson::ParseErrorCode code = d.GetParseError();
+      LOG_ERROR << "parse error: " << code;
+    }
+  } catch (const std::exception &e) {
+    LOG_ERROR << "getStringField exception: " << e.what();
+  }
+
+  return res;
+}

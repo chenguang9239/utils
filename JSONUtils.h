@@ -55,6 +55,8 @@ public:
     static bool JSONToDocument(const std::string &json, rapidjson::Document& d);
 
     static bool AddMongoDateStr(rapidjson::Document &d);
+
+    static std::string getObjectField(const std::string &json, const std::string &field);
 };
 
 #endif //CPPSERVER_JSONUTILS_H
