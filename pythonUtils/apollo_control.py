@@ -101,6 +101,27 @@ def modify(env, cluster, namespace, key, value):
             restart = restart + 1
             conn.close()
 
+def remove(env, cluster, namespace, key):
+    headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN2}
+
+    restart = 0
+    while True:
+        conn = httplib.HTTPConnection(PORTAL_ADDRESS)
+        try:
+            if restart < 3:
+                body = '{}'
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID2 + '/clusters/' + cluster + '/namespaces/' + namespace + '/items/' + key + '?operator=' + USERNAME
+                print "debug body: " + body
+                conn.request('DELETE', url, body, headers)
+                response = conn.getresponse()
+                data = response.read()
+                print "response: " + data
+            break
+        except Exception, e:
+            print str(e)
+            restart = restart + 1
+            conn.close()
+
 def getValue(env, cluster, namespace, key):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
