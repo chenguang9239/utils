@@ -17,7 +17,7 @@ TOKEN="XXXXXX"
 APPID="XXXXXX"
 
 # 将在Apollo上修改的参数发布
-def release(env, namespace):
+def release(env, cluster, namespace):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -26,17 +26,18 @@ def release(env, namespace):
         try:
             if restart < 3:
                 body = '{"releaseTitle":"auto release","releaseComment":"auto release","releasedBy":"' + USERNAME + '"}'
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace + '/releases'
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace + '/releases'
                 conn.request('POST', url, body, headers)
                 response = conn.getresponse()
                 data = response.read()
                 print "response: " + data
             break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
-def addValue(env, namespace, key, value, comment):
+def addValue(env, cluster, namespace, key, value, comment):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -45,13 +46,14 @@ def addValue(env, namespace, key, value, comment):
         try:
             if restart < 3:
                 body = '{"key":"' + key + '","value":"' + generatePlainStr(value) + '","comment":"' + comment + '","dataChangeCreatedBy":"' + USERNAME + '"}'
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace + '/items/'
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace + '/items/'
                 conn.request('POST', url, body, headers)
                 response = conn.getresponse()
                 data = response.read()
                 print "response: " + data
                 break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
@@ -64,7 +66,6 @@ def isValidJSON(value):
         print "invalid JSON: " + value
         return False
     except:
-        print "other exception, value: " + value
         return False
 
 def generatePlainStr(value):
@@ -79,7 +80,7 @@ def generatePlainStr(value):
 # value needs to be string type, not a JSON block. see https://github.com/ctripcorp/apollo/wiki/Apollo%E5%BC%80%E6%94%BE%E5%B9%B3%E5%8F%B0
 # so the items in the body need to like: string key - string value,
 # so the " in value need to be escaped
-def modify(env, namespace, key, value):
+def modify(env, cluster, namespace, key, value):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -88,18 +89,19 @@ def modify(env, namespace, key, value):
         try:
             if restart < 3:
                 body = '{"key":"' + key + '","value":"' + generatePlainStr(value) + '","dataChangeLastModifiedBy":"' + USERNAME + '"}'
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace + '/items/' + key
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace + '/items/' + key
                 print "debug body: " + body
                 conn.request('PUT', url, body, headers)
                 response = conn.getresponse()
                 data = response.read()
                 print "response: " + data
             break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
-def getValue(env, namespace, key):
+def getValue(env, cluster, namespace, key):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -107,7 +109,7 @@ def getValue(env, namespace, key):
         conn = httplib.HTTPConnection(PORTAL_ADDRESS)
         try:
             if restart < 3:
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace
                 conn.request('GET', url, '', headers)
                 response = conn.getresponse()
                 data = response.read()
@@ -119,7 +121,8 @@ def getValue(env, namespace, key):
                         break
                 return value
             break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
@@ -157,28 +160,28 @@ def modifyJSONValue(value, jsonKey, jsonValue):
         print "jsonKey not exists and skip modify, value: " + value
     return newJSONValue
 
-def getJSONValue(env, namespace, key, jsonKey):
+def getJSONValue(env, cluster, namespace, key, jsonKey):
     jsonValue = ''
-    value = getValue(env, namespace, key)
-    print "env: " + env + ", namespace: " + namespace + ", key: " + key + ", value: " + value
+    value = getValue(env, cluster, namespace, key)
+    print "env: " + env + ", cluster, namespace: " + namespace + ", key: " + key + ", value: " + value
     if value != '':
         jsonValue = parseJSONValue(value, jsonKey)
         print "jsonKey: " + jsonKey + ", jsonValue: " + jsonValue
     return jsonValue
 
-def addJSONValue(env, namespace, key, comment, jsonKey, jsonValue):
-    value = getValue(env, namespace, key)
+def addJSONValue(env, cluster, namespace, key, comment, jsonKey, jsonValue):
+    value = getValue(env, cluster, namespace, key)
     newValue = insertJSONValue(value, jsonKey, jsonValue)
     if newValue != '':
-        addValue(env, namespace, key, newValue, comment)
+        addValue(env, cluster, namespace, key, newValue, comment)
     else:
         print "new value empty, skip add JSON value"
 
-def modifyJSON(env, namespace, key, jsonKey, jsonValue):
-    value = getValue(env, namespace, key)
+def modifyJSON(env, cluster, namespace, key, jsonKey, jsonValue):
+    value = getValue(env, cluster, namespace, key)
     newValue = modifyJSONValue(value, jsonKey, jsonValue)
     if newValue != '':
-        modify(env, namespace, key, newValue)
+        modify(env, cluster, namespace, key, newValue)
     else:
         print "new value empty, skip modify JSON"
 
@@ -197,14 +200,12 @@ def createNamespace(namespace):
                 data = response.read()
                 print "response: " + data
             break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
-    for env in ENVS:
-        addValue(env, namespace, 'isDeleted', '0', 'if namespace abandoned')
-
-def getAllConfigs(env, namespace):
+def getAllConfigs(env, cluster, namespace):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -213,18 +214,19 @@ def getAllConfigs(env, namespace):
         try:
             if restart < 5:
                 time.sleep(1)
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace + '/releases/latest'
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace + '/releases/latest'
                 conn.request('GET', url, '', headers)
                 response = conn.getresponse()
                 data = response.read()
                 configs = json.loads(data, object_pairs_hook=collections.OrderedDict)
                 return configs['configurations']
             break
-        except:
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
-def getNamespaceConfig(env, namespace):
+def getNamespaceConfig(env, cluster, namespace):
     headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
 
     restart = 0
@@ -232,19 +234,66 @@ def getNamespaceConfig(env, namespace):
         conn = httplib.HTTPConnection(PORTAL_ADDRESS)
         try:
             if restart < 3:
-                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/default/namespaces/' + namespace
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces/' + namespace
                 conn.request('GET', url, '', headers)
                 response = conn.getresponse()
                 data = response.read()
                 return data
             break
-        except:
+        except Exception, e:
+            print str(e)
+            restart = restart + 1
+            conn.close()
+
+def getAllNamespaces(env, cluster):
+    headers = {"Content-type": "application/json;charset=UTF-8", "Authorization": TOKEN}
+
+    restart = 0
+    while True:
+        conn = httplib.HTTPConnection(PORTAL_ADDRESS)
+        try:
+            if restart < 5:
+                time.sleep(1)
+                url = '/openapi/v1/envs/' + env + '/apps/' + APPID + '/clusters/' + cluster + '/namespaces'
+                print url
+                conn.request('GET', url, '', headers)
+                response = conn.getresponse()
+                data = response.read()
+                configs = json.loads(data, object_pairs_hook=collections.OrderedDict)
+                namespaces=[]
+                for config in configs:
+                    print config["namespaceName"]
+                    namespaces.append(config["namespaceName"])
+                return namespaces
+            break
+        except Exception, e:
+            print str(e)
             restart = restart + 1
             conn.close()
 
 def usage():
     # print 'apollo_control.py -n namespace -k value -v value '
     print 'please check your code'
+
+# copy to another APPID
+def copy():
+    namespaces=getAllNamespaces("PRO", "prod")
+    print namespaces
+
+    for namespace in namespaces:
+        print namespace
+        createNamespace(namespace)
+
+    for namespace in namespaces:
+        print namespace
+        if namespace in ["application", "field"]:
+            continue
+        config = getAllConfigs("PRO", "prod", namespace)
+        if config is None:
+            continue
+        for k, v in config.items():
+            addValue("PRO", "prod", namespace, k, v, "")
+
 
 def main(argv):
     # try:
@@ -255,11 +304,13 @@ def main(argv):
 
     # for opt, arg in opts:
     #     if opt == '-n':
-    #         namespase = arg
+    #         namespace = arg
     #     if opt == '-k':
     #         key = arg
     #     if opt == '-v':
     #         value = arg
+
+
 
     key_condition = 'XXXXXX'
     value_condition = 'YYYYYY'
@@ -267,8 +318,9 @@ def main(argv):
     value_target = 1
 
     env = 'PRO'
-    namespase = 'NNNNNN'
-    nmConfigs = getNamespaceConfig(env, namespase)
+    cluster = "default"
+    namespace = 'NNNNNN'
+    nmConfigs = getNamespaceConfig(env, cluster, namespace)
 
     print "debug: " + nmConfigs
 
@@ -290,10 +342,10 @@ def main(argv):
                         if valueStruct[key_condition].startswith(value_condition):
                             if valueStruct.has_key(key_target):
                                 print "begin to modify key: " + key + ", old value: " + value
-                                modifyJSON(env, namespase, key, key_target, value_target)
+                                modifyJSON(env, cluster, namespace, key, key_target, value_target)
                             else:
                                 print "begin to insert key: " + key + ", old value: " + value
-                                addJSONValue(env, namespase, key, key_target, value_target)
+                                addJSONValue(env, cluster, namespace, key, key_target, value_target)
                         else:
                             print "skip key: " + key + ", value: " + value
                 except ValueError:
@@ -301,7 +353,7 @@ def main(argv):
                     continue
         else:
             print "no items, totalStruct: " + totalStruct
-    # release(env, namespace)
+    # release(env, cluster, namespace)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
