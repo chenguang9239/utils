@@ -3,3 +3,17 @@ while read line; do if [ "X`cat 2 | grep -w $line | wc -l`" != "X1" ]; then echo
 
 # 只保留时间最近的一个core
 ls -lt ./core.* 2>/dev/null | awk '{if(NR>1){print $9}}' | xargs rm -rf
+
+
+while read line
+do
+	if [ "X`cat test | grep -w $line | wc -l`" == "X1" ]
+	then
+		cat test | grep -w $line
+	elif [ "X`cat test | grep -w ${line}_ | wc -l`" == "X1" ]
+	then
+		cat test | grep -w ${line}_
+	else
+		echo "$line ="
+	fi
+done < 2
